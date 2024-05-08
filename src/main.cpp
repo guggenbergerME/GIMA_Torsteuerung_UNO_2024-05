@@ -24,86 +24,19 @@ long letzte_meldung = 0;
 char publish_meldung[50];
 int zaehler = 0;
 
+//************************************************************************** Pinout
+const int RELAIS_AUF = 2; // Relais-Pin am Arduino
+
 //************************************************************************** Funktionsprototypen
 void loop                       ();
 void setup                      ();
 void reconnect                  ();
 void callback(char* topic, byte* payload, unsigned int length);
-void connect_mqtt               ();
 
 
 //************************************************************************** Zeitschleifen
 unsigned long previousMillis_mqtt = 0; // mqtt abrufen
-unsigned long interval_mqtt = 500; 
-
-
-
-// ######################################################################## mqtt callback
-void callback(char* topic, byte* payload, unsigned int length) {
-
-
-    if (strcmp(topic,"GIMA_Technik/TEST_ARDUINO_LAN/Steuerung")==0) {
-
-        // Kanal A
-        if ((char)payload[0] == 'o' && (char)payload[1] == 'n') {  
-                 Serial.println("relais_A -> AN");
-
-                 //client.publish("RK_WiFi_003/OUT/A","on");
-                delay(100);
-              }
-
-        if ((char)payload[0] == 'o' && (char)payload[1] == 'f' && (char)payload[2] == 'f') {  
-                 Serial.println("relais_A -> AUS");
-
-                 //client.publish("RK_WiFi_003/OUT/A","off");
-                delay(100);
-              }
-      } 
-}
-
-
-// ######################################################################## mqtt reconnect
-void reconnect() {
-  // Loop until we're reconnected
-   while (!client.connected()) {
-    Serial.print("Verbindung zu mqtt IP: ");
-    Serial.print(server);
-    Serial.println("");
-    // Create a random client ID
-    String clientId = "GIMA-Technik";
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect("GIMA_TEST2", "daten1", "qwerqwer")) {
-      Serial.println("Verbunden ....");
-      // ... and resubscribe
-      client.subscribe("GIMA_Technik/TEST_ARDUINO_LAN/Steuerung");
-        
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
-
-
-  /*
-  if (client.connect("GIMA_TEST2", "daten1", "qwerqwer")) {
-    Serial.println("Connecting to MQTT broker...");
-
-    // mqtt Meldungen auslesen 
-    client.subscribe("GIMA_Technik/TEST_ARDUINO_LAN/Steuerung/");
-
-  } else {
-    Serial.print("failed, rc=");
-    Serial.println(client.state());
-  }
-    return client.connected();
-    */
-
-}
-
+unsigned long interval_mqtt = 50; 
 
 //######################################################################## setup
 void setup() {
@@ -117,15 +50,70 @@ void setup() {
   // Pause Netzwerk Antwort
   delay(1500);
 
-  // Client starten
+  // Client starten und Callback abrufen
   client.setServer(server, 1883);
   client.setCallback(callback);
 
+  // Pins belegen
+  pinMode(RELAIS_AUF, OUTPUT);
+  // Ausgang nach Neustart setzen
+  digitalWrite(RELAIS_AUF, !LOW);
 
 }
 
-//######################################################################## mqtt connect
-void connect_mqtt(){
+// ######################################################################## mqtt callback
+void callback(char* topic, byte* payload, unsigned int length) {
+
+
+    if (strcmp(topic,"GIMA_Technik/TEST_ARDUINO_LAN/Steuerung")==0) {
+
+        // Kanal A
+        if ((char)payload[0] == 'o' && (char)payload[1] == 'n') {  
+                 Serial.println("relais_A -> AN");
+                  digitalWrite(RELAIS_AUF, !HIGH);
+                 delay(10);
+              }
+
+        if ((char)payload[0] == 'o' && (char)payload[1] == 'f' && (char)payload[2] == 'f') {  
+                 Serial.println("relais_A -> AUS");
+                  digitalWrite(RELAIS_AUF, !LOW);
+                 delay(10);
+              }
+      } 
+}
+
+
+
+// ######################################################################## mqtt reconnect
+void reconnect() {
+  // Loop until we're reconnected
+   while (!client.connected()) {
+    /*
+    Serial.print("Verbindung zu mqtt IP: ");
+    Serial.print(server);
+    Serial.println("");
+    */
+    // Create a random client ID
+    String clientId = "GIMA-Technik";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect("GIMA_TEST2", "daten1", "qwerqwer")) {
+      Serial.println("mqtt lesen ....");
+      // ... and resubscribe
+      client.subscribe("GIMA_Technik/TEST_ARDUINO_LAN/Steuerung");
+        
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+//######################################################################## loop
+void loop() {
 
   // mqtt Daten senden     
   if (!client.connected()) {
@@ -133,39 +121,17 @@ void connect_mqtt(){
     }
     client.loop(); 
 
-}
 
-
-
-//######################################################################## loop
-void loop() {
-
-
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-
-/*
-  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ mqtt Checken
-  if (millis() - previousMillis_mqttCHECK > interval_mqttCHECK) {
-      previousMillis_mqttCHECK = millis(); 
-      connect_mqtt();
-    }  
-*/
-
-/*
   // Nach einem Zeitintervall eine Nachricht publishen
   long now = millis();
   if (now - letzte_meldung > 6000) {
     letzte_meldung = now;
     ++zaehler;
-    snprintf (publish_meldung, 75, "Testzähler #%ld", zaehler);
+    snprintf (publish_meldung, 75, "UNO Zähler #%ld", zaehler);
     Serial.print("## >> mqtt - Nachricht publish: ");
     Serial.println(publish_meldung);
-    client.publish("GIMA_Technik/TEST_ARDUINO_LAN/zaehler", publish_meldung);
+    client.publish("GIMA_Technik/TEST_ARDUINO_LAN/Zaehler", publish_meldung);
   }
-*/
 
 }
 
