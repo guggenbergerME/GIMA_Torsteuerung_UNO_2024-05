@@ -4,25 +4,32 @@
 
 
 
-//DEFINE NETWORK
+//************************************************************************** LAN Network definieren
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress ip(192, 168, 1, 22); //comment this line if you are using DHCP
 IPAddress server(192, 168, 1, 5);
 EthernetClient ethClient;
 
-//MQTT Parameters
-String topicBase = "location/room/sub-room/";
-const char id[] = "GardenCenter";
+//************************************************************************** mqtt Referenz
 PubSubClient client(ethClient);
 
+
+//************************************************************************** Intervalle
 long lastReconnectAttempt = 0;
 const int reconnectInterval = 5000;
 
-
+//************************************************************************** Variablen
 long letzte_meldung = 0;
 char publish_meldung[50];
 int zaehler = 0;
 
+//************************************************************************** Funktionsprototypen
+void loop                       ();
+void setup                      ();
+boolean reconnect               ();
+
+
+// ######################################################################## mqtt reconnect
 boolean reconnect() {
   if (client.connect("GIMA_TEST2", "daten1", "qwerqwer")) {
     Serial.println("Connecting to MQTT broker...");
@@ -35,20 +42,24 @@ boolean reconnect() {
   return client.connected();
 }
 
-
+//######################################################################## setup
 void setup() {
 
-  Serial.begin(9600);
+  // Serielle Schnittstelle
+  Serial.begin(115200);
 
 
-  // Ethernet.begin(mac); //Use this if you want to use DHCP
-  Ethernet.begin(mac, ip); //Use this if you want a static iP.
-  delay(1500); //Used to allow time for the network to connect.
-
+  // Ethernet starten
+  Ethernet.begin(mac, ip);
+  // Pause Netzwerk Antwort
+  delay(1500);
+  
+  // Client starten
   client.setServer(server, 1883);
 
 }
 
+//######################################################################## loop
 void loop() {
 
   if (!client.connected()) {
