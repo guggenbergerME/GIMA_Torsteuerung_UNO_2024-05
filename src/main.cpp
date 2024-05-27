@@ -2,7 +2,7 @@
 #include <Ethernet.h>
 #include <PubSubClient.h>
 
-//************************************************************************** LAN Network definieren
+//************************************************************************** LAN Network definieren N
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress ip(192, 168, 1, 22); //comment this line if you are using DHCP
 IPAddress server(192, 168, 1, 5); // mqtt Server
